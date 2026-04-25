@@ -8,7 +8,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "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")
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "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")
 PROMPT = """You are a smart waste classifier. Look at the image and classify it.
 
 Respond ONLY in this exact JSON format, nothing else:
