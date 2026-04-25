@@ -4,13 +4,11 @@ import json
 import requests
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-import google.generativeai as genai
 
 app = Flask(__name__)
 CORS(app)
 
-genai.configure(api_key="AIzaSyCWUONBDjJK_St8ksmzNusduI7KSvddSuY")
-model = genai.GenerativeModel("gemini-2.0-flash-lite")
+MISTRAL_API_KEY = "iQLe1Tgd5FSMMeMtDZ3eNKb6Xhsb5m90"
 
 PROMPT = """You are a smart waste classifier. Look at the image and classify it.
 
@@ -43,15 +41,39 @@ def predict():
     content_type = image_file.content_type or "image/jpeg"
 
     try:
-        image_part = {
-            "inline_data": {
-                "mime_type": content_type,
-                "data": image_base64
+        response = requests.post(
+            url="https://api.mistral.ai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {MISTRAL_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "pixtral-12b-2409",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": f"data:{content_type};base64,{image_base64}"
+                            },
+                            {
+                                "type": "text",
+                                "text": PROMPT
+                            }
+                        ]
+                    }
+                ],
+                "max_tokens": 500
             }
-        }
+        )
 
-        response = model.generate_content([PROMPT, image_part])
-        response_text = response.text.strip()
+        raw = response.json()
+        print(raw)
+        if "choices" not in raw:
+            return jsonify({"error": str(raw)}), 500
+
+        response_text = raw["choices"][0]["message"]["content"].strip()
 
         if response_text.startswith("```"):
             response_text = response_text.split("```")[1]
