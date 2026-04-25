@@ -4,11 +4,14 @@ import json
 import requests
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
+import google.generativeai as genai
 
 app = Flask(__name__)
 CORS(app)
 
-OPENROUTER_API_KEY = "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"
+genai.configure(api_key="AIzaSyCWUONBDjJK_St8ksmzNusduI7KSvddSuY")
+model = genai.GenerativeModel("gemini-2.0-flash-lite")
+
 PROMPT = """You are a smart waste classifier. Look at the image and classify it.
 
 Respond ONLY in this exact JSON format, nothing else:
@@ -40,40 +43,15 @@ def predict():
     content_type = image_file.content_type or "image/jpeg"
 
     try:
-        response = requests.post(
-            url="https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": "openrouter/auto",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:{content_type};base64,{image_base64}"
-                                }
-                            },
-                            {
-                                "type": "text",
-                                "text": PROMPT
-                            }
-                        ]
-                    }
-                ],
-                "max_tokens": 500
+        image_part = {
+            "inline_data": {
+                "mime_type": content_type,
+                "data": image_base64
             }
-        )
+        }
 
-        raw = response.json()
-        print(raw)
-        if "choices" not in raw:
-            return jsonify({"error": str(raw)}), 500
-        response_text = raw["choices"][0]["message"]["content"].strip()
+        response = model.generate_content([PROMPT, image_part])
+        response_text = response.text.strip()
 
         if response_text.startswith("```"):
             response_text = response_text.split("```")[1]
